@@ -160,7 +160,12 @@ Menambahkan konfigurasi iptables berikut di SURABAYA.
 iptables -t nat -A POSTROUTING -s 192.168.0.0/16 -o eth0 -j SNAT --to-source 10.151.72.14
 ~~~
 Keterangan:
-
+- `-t nat: Menggunakan tabel NAT karena akan mengubah alamat asal dari paket
+- `-A POSTROUTING`: Menggunakan chain POSTROUTING karena mengubah asal paket setelah routing
+- `-s 192.168.0.0/16`: Mendifinisikan alamat asal dari paket yaitu semua alamat IP dari subnet 192.168.0.0/16
+- `-o eth0`: Paket keluar dari eth0 SURABAYA
+- `-j SNAT`: Menggunakan target SNAT untuk mengubah source atau alamat asal dari paket
+- `--to-source 10.151.72.14`: Mendefinisikan IP source pengganti, di mana digunakan eth0 SURABAYA
 
 ## Soal 2
 Diminta untuk mendrop semua akses SSH dari luar Topologi (UML) pada server
@@ -171,7 +176,12 @@ Menambahkan konfigurasi iptables berikut di SURABAYA.
 iptables -A FORWARD -p tcp --dport 22 -d 10.151.73.24/29 -i eth0 -j DROP
 ~~~
 Keterangan:
-
+- `-A FORWARD`: Menggunakan chain FORWARD karena berurusan dengan memfilter paket yang melewati firewall (dalam hal ini firewall SURABAYA)
+- `-p tcp`: Mendefinisikan protokol yang digunakan, yaitu tcp
+- `--dport 22`: Mendefinisikan port yang digunakan, yaitu 22 (port SSH)
+- `-d 10.151.73.24/29`: Mendefinisikan alamat tujuan dari paket, dalam hal ini adalah DHCP dan DNS SERVER yang berada pada subnet 10.151.73.24/29
+- `-i eth0`: Paket masuk dari eth0 SURABAYA
+- `-j DROP`: Paket di-drop
 
 ## Soal 3
 Membatasi DHCP
@@ -183,6 +193,12 @@ Menambahkan konfigurasi iptables berikut di MALANG dan MOJOKERTO.
 iptables -A INPUT -p icmp -m connlimit --connlimit-above 3 --connlimit-mask 0 -j DROP
 ~~~
 Keterangan:
+- `-A INPUT`: Menggunakan chain INPUT karena dikonfigurasikan pada DHCP dan DNS SERVER secara langsung (MOJOKERTO dan MALANG)
+- `-p icmp`: Mendefinisikan protokol yang digunakan, yaitu ICMP (ping)
+- `-m connlimit`: Menggunakan rule connection limit
+- `--connlimit-above 3`: Limit yang ditangkap paket adalah di atas 3
+- `--connlimit-mask 0`: Hanya memperbolehkan 3 koneksi setiap subnet dalam satu waktu
+- `-j DROP`: Paket di-drop
 
 # Soal 4 dan Soal 5
 Membatasi akses ke MALANG yang berasal dari SUBNET
@@ -195,6 +211,13 @@ Menambahkan konfigurasi iptables berikut di MALANG.
 iptables -A INPUT -s 192.168.4.0/24 -m time --timestart 07:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j ACCEPT
 ~~~
 Keterangan:
+- `-A INPUT`: Menggunakan chain INPUT karena dikonfigurasikan pada MALANG
+- `-s 192.168.4.0/24`: Mendifinisikan alamat asal dari paket yaitu semua alamat IP dari subnet 192.168.4.0/24 (SIDOARJO)
+- `-m time`: Menggunakan rule time
+- `--timestart 07:00`: Mendefinisikan waktu mulai yaitu 07:00
+- `--timestop 17:00`: MEndefinisikan waktu berhenti yaitu 17:00
+- `--weekdays Mon,Tue,Wed,Thu,Fri`: Mendefinisikan hari yaitu Senin hingga Jumat
+- `-j ACCEPT`: Paket di-accept
 
 ## Soal 5
 Akses dari subnet GRESIK hanya diperbolehkan pada pukul 17.00 hingga pukul 07.00 setiap
@@ -206,12 +229,16 @@ iptables -A INPUT -s 192.168.0.0/24 -m time --timestart 17:00 --timestop 00:00 -
 iptables -A INPUT -s 192.168.0.0/24 -m time --timestart 00:00 --timestop 08:00 -j ACCEPT
 ~~~
 Keterangan:
+Sama seperti soal 4, namun source atau `-s` diganti dengan subnet GRESIK yakni `912.168.0.0/24`, serta `--timestart` dan `--timestop` diganti sesuai dengan soal.
+
 
 Terakhir menambahkan konfigurasi iptables berikut di MALANG.
 ~~~
 iptables -A INPUT -s 192.168.4.0/24 -j REJECT
 iptables -A INPUT -s 192.168.0.0/24 -j REJECT
 ~~~
+Mereject semua paket yang berasal dari subnet SIDOARJO dan GRESIK
+
 
 ## Soal 6
 SURABAYA disetting sehingga setiap
@@ -251,6 +278,18 @@ iptables -t nat -A POSTROUTING -p tcp -d 192.168.1.2 --dport 80 -j SNAT --to-sou
 iptables -t nat -A POSTROUTING -p tcp -d 192.168.1.3 --dport 80 -j SNAT --to-source 192.168.6.1:80
 ~~~
 Keterangan:
+- `-A PREROUTING`: Menggunakan chain PREROUTING karena mengubah alamat tujuan sebelum routing
+- `-A POSTROUTING`: Menggunakan chain POSTROUTING karena mengubah asal paket setelah routing
+- `-d`:  Mendefinisikan alamat tujuan dari paket, pada chain PREROUTING asalnya adalah 192.168.6.1, sedangkan pada chain POSTROUTING asalnya adalah 192.168.1.2 dan 192.168.1.3 (eth0 PROBOLINGGO dna eth0 MADIUN)
+- `--dport 80`: Port yang digunakan adalah port 80
+- `-m statistic`: Menggunakan rule statistic
+- `--mode nth`: Menggunakan mode nth
+- `--every 2`: Paket ditangkap oleh iptables setiap 2 paket
+- `--packet 0`: Hitungan pertama dari setiap 2 paket yang telah ditangkap
+- `-j DNAT`:  Menggunakan target DNAT untuk mengganti alamat tujuan
+- `j SNAT`: Menggunakan target SNAT untuk mengubah source atau alamat asal dari paket
+- `--to-destination`: Mendefinisikan IP tujuan pengganti yaitu IP PROBOLINGGO dan MADIUN port 80
+- `--to-source 192.168.6.1:80`: Mendefinisikan IP asal pengganti yaitu IP random tadi yang telah digunakan sebagai DNS.
 
 ## Soal 7
 Semua paket didrop oleh firewall (dalam topologi) tercatat dalam log pada setiap
@@ -264,19 +303,18 @@ iptables -A LOGGING -m limit --limit 2/min -j LOG --log-prefix "DROP: " --log-le
 iptables -A LOGGING -j DROP
 ~~~
 Keterangan:
+- `-N LOGGING`: Membuat chain baru yaitu LOGGING
+- `-j LOGGING`: Menggunakan chain LOGGING
+- `-A LOGGING`: Menambahkan rule pada chain LOGGING
+- `--limit 2/min`: Membatasi jumlah paket yang ditangkap yaitu 2 setiap menit
+- `-j LOG`: Menggunakan target LOG
+- `--log-prefix "DROP: ": Menambahkan prefix atau awalan "DROP: " pada setiap log
+- `--log-level info`: Menggunakan rule log level di mana level log yang digunakan adalah info
 
-Menambahkan konfigurasi iptables berikut di MALANG.
+
+Menambahkan konfigurasi iptables berikut di MALANG dan MOJOKERTO.
 ~~~
 iptables -A LOGGING -m limit --limit 2/min -j LOG --log-prefix "DROP: " --log-level info
 iptables -A LOGGING -j DROP
 ~~~
-Keterangan:
-
-
-Menambahkan konfigurasi iptables berikut di MOJOKERTO.
-~~~
-iptables -A LOGGING -m limit --limit 2/min -j LOG --log-prefix "DROP: " --log-level info
-iptables -A LOGGING -j DROP
-~~~
-Keterangan:
 
